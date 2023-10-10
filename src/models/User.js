@@ -6,11 +6,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        allowNull: true,
+        allowNull: false,
       },
       userId: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
       },
       email: {
         type: DataTypes.STRING,

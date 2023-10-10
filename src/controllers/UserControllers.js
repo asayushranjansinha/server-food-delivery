@@ -201,5 +201,76 @@ class UserContoller {
       throw err;
     }
   }
+
+  async getAllUsers(req, res) {
+    try {
+      let users = await UserServices.getAllWithOrdered([["createdAt", "DESC"]]);
+
+      let response = Object.assign({}, users);
+      if (Utils.isValid(response)) {
+        return res.status(200).json({ error: true, users: users });
+      }
+      return res.status(401).json({ error: true, message: "Users not found!" });
+    } catch (error) {
+      console.log("Failed to Fetch Users.", error);
+      return res.status(501).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async getProfile(req, res) {
+    let userId = req.params.userId;
+    try {
+      const user = await UserServices.get({ userId: userId }, [
+        "userId",
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "userType",
+      ]);
+
+      let response = Object.assign({}, user);
+      if (Utils.isValid(response)) {
+        return res.status(200).json({ error: false, user: user });
+      }
+      return res.status(401).json({ error: true, message: "User not found." });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      return res.status(501).json({
+        error: true,
+        message: "Internal server error.",
+      });
+    }
+  }
+
+  async updateProfile(req, res) {
+    let userId = req.params.userId;
+    let { firstName, lastName } = req.body;
+    try {
+      const user = await UserServices.get({ userId: userId }, [
+        "id",
+        "userId",
+        "firstName",
+        "lastName",
+        "email",
+      ]);
+      let response = Object.assign({}, user);
+      if (Utils.isValid(response)) {
+        (user.firstName = firstName),
+          (user.lastName = lastName),
+          (user.updatedAt = Utils.getDate());
+        user.save();
+
+        return res.status(200).json({ error: false, user: user });
+      }
+      return res.status(401).json({
+        error: true,
+        message: "An error has occurred while updating profile.",
+      });
+    } catch (error) {
+      console.log("Error while updating profile", error);
+      return res.status(501).json({ error: true, message: "Server Error" });
+    }
+  }
 }
 module.exports = new UserContoller();
