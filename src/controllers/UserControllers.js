@@ -119,5 +119,87 @@ class UserContoller {
       return res.status(501).json({ error: true, message: "Server Error." });
     }
   }
+
+  async forgotPassword(req, res) {
+    let { email, newPassword } = req.body;
+    try {
+      let newHashedPassword = bcryptjs.hashSync(newPassword, numSaltRounds);
+      let user = await UserServices.update(
+        {
+          password: newHashedPassword,
+        },
+        { email: email }
+      );
+      if (user) {
+        return res.status(200).json({
+          error: false,
+          message: "A mail containing your new password has been sent.",
+        });
+      }
+      return res.status(401).json({
+        error: true,
+        message: "Error updating new password",
+      });
+    } catch (error) {
+      console.log("Error updating new password", error);
+      return res.status(501).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async deleteAccount(req, res) {
+    let userId = req.params.userId;
+    try {
+      let response = await UserServices.delete({
+        userId: userId,
+      });
+      if (response) {
+        return res.status(200).json({
+          error: false,
+          message: "User deleted successfully.",
+        });
+      } else {
+        return res.status(401).json({
+          error: true,
+          message: "Error deleting user.",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({
+        error: true,
+        msg: "Internal server error. Unable to delete user.",
+      });
+    }
+  }
+
+  async accountExists(email) {
+    try {
+      // Retrieve user based on email
+      const user = await User.get({ email: email });
+
+      // Check if the user exists and is valid
+      const isValidUser = !!Utils.isValid(user);
+
+      return isValidUser;
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  async isActive(email) {
+    try {
+      // Retrieve user based on email
+      const user = await User.get({ email: email });
+
+      // Get the 'active' property from the user
+      const active = user ? user.active : false;
+
+      return active;
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
 }
 module.exports = new UserContoller();

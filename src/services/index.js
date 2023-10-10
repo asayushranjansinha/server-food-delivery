@@ -85,7 +85,7 @@ module.exports = (model) => {
     },
     async delete(filters) {
       try {
-        let response = await dbModel.delete({
+        let response = await dbModel.destroy({
           where: filters,
         });
         return response;
