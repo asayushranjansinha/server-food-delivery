@@ -202,5 +202,42 @@ class RestaurantController {
       return res.status(500).json({ error: "Server error" });
     }
   }
+
+  async fetchRestaurantsByFoodItem(req, res) {
+    try {
+      const foodItemName = req.query.item;
+
+      if (!foodItemName) {
+        return res
+          .status(400)
+          .json({ error: "Food item name is required in the query parameter" });
+      }
+      let filter = {};
+      let attributes = {};
+      let includes = [
+        {
+          model: Menu,
+          required: true, // Use required to perform an inner join
+          include: {
+            model: FoodItem,
+            where: { name: foodItemName }, // Filter by the food item's name
+            attributes: ["name", "price"], // Exclude other food item attributes from the response
+          },
+          attributes: ["id", "name"], // Include only menu's id and name
+        },
+      ];
+      const restaurants = await RestaurantServices.getMany(
+        filter,
+        attributes,
+        includes
+      );
+
+      // Return the list of restaurants offering the food item
+      return res.status(200).json(restaurants);
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Server error" });
+    }
+  }
 }
 module.exports = new RestaurantController();
