@@ -29,12 +29,21 @@ db.Sequelize = sequelize;
 
 // Models
 db.User = require("./User.js")(sequelize, DataTypes);
+db.Restaurant = require("./Restaurant.js")(sequelize, DataTypes);
+db.Menu = require("./Menu.js")(sequelize, DataTypes);
+db.FoodItem = require("./FoodItem.js")(sequelize, DataTypes);
+
+// Associations 
+db.Restaurant.associate(db);
+db.Menu.associate(db);
+db.FoodItem.associate(db);
+
 
 // Sync DB
 
 (async function sync() {
   try {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ alter: true });
     console.log("All models were synchronized successfully.");
   } catch (error) {
     throw error;

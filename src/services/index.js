@@ -17,11 +17,12 @@ module.exports = (model) => {
         throw error;
       }
     },
-    async get(filters, attributes) {
+    async get(filters, attributes, includes) {
       try {
         let response = await dbModel.findOne({
           where: filters,
           attributes: attributes,
+          include: includes,
         });
         return response;
       } catch (error) {
@@ -36,10 +37,12 @@ module.exports = (model) => {
         throw error;
       }
     },
-    async getMany(filters) {
+    async getMany(filters, attributes, includes) {
       try {
         let response = await dbModel.findAll({
           where: filters,
+          attributes: attributes,
+          include: includes,
         });
         return response;
       } catch (error) {
@@ -58,6 +61,18 @@ module.exports = (model) => {
         throw error;
       }
     },
+    async searchByPk(id, attributes, include) {
+      try {
+        let response = await dbModel.findByPk(id, {
+          attributes: attributes,
+          include: include,
+        });
+        return response;
+      } catch (error) {
+        throw error;
+      }
+    },
+
     async getAllWithOrdered(order, offset, limit) {
       try {
         let response = dbModel.findAll({

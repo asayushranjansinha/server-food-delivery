@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define(
-    "User",
+  const Restaurant = sequelize.define(
+    "Restaurant",
     {
       id: {
         type: DataTypes.INTEGER,
@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      userId: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false,
       },
@@ -16,39 +16,24 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       phone: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      firstName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      lastName: {
-        type: DataTypes.STRING,
-      },
-      userType: {
+      restaurantType: {
         type: DataTypes.ENUM,
-        values: ["customer", "store"],
-        defaultValue: "customer",
+        values: ["veg", "nonveg"],
+        defaultValue: "veg",
       },
       active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
-      lastLoginDate: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
     },
     {}
   );
-  User.associate = function (models) {
-    //
+  Restaurant.associate = (models) => {
+    Restaurant.hasMany(models.Menu);
   };
-  return User;
+  return Restaurant;
 };
