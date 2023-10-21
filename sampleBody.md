@@ -2,7 +2,7 @@
 
 ```
 {
-  "details": {
+  "restaurantDetails": {
     "name": "Bhawna Foods",
     "email": "bhawna@example.com",
     "phone": "1234567890",
