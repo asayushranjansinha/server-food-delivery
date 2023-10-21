@@ -148,3 +148,39 @@
 }
 
 ```
+
+## Some test users
+
+```
+{
+  "email": "admin@example.com",
+  "phone": "1234567890",
+  "password": "yourNewPassword",
+  "firstName": "John",
+  "lastName": "Doe",
+  "userType": "store"
+  <!--userid: 8655a32e-967c-4c2a-aa14-4164e98df32f -->
+},
+{
+  "email": "example@example.com",
+  "phone": "1234567890",
+  "password": "yourpassword",
+  "firstName": "John",
+  "lastName": "Doe",
+  <!--userid: 3c765110-48fd-4f87-bfaa-3f75c56af571 -->
+},
+{
+  "email": "test@example.com",
+  "phone": "1234567890",
+  "password": "yourpassword",
+  "firstName": "John",
+  "lastName": "Doe",
+  <!--userid: fc267836-5883-4fe3-99ce-1de964731961 -->
+}
+```
+
+## ngrok link
+
+```
+ https://99d8-182-68-50-56.ngrok-free.app -> http://localhost:3000
+```
