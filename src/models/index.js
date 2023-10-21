@@ -33,11 +33,10 @@ db.Restaurant = require("./Restaurant.js")(sequelize, DataTypes);
 db.Menu = require("./Menu.js")(sequelize, DataTypes);
 db.FoodItem = require("./FoodItem.js")(sequelize, DataTypes);
 
-// Associations 
+// Associations
 db.Restaurant.associate(db);
 db.Menu.associate(db);
 db.FoodItem.associate(db);
-
 
 // Sync DB
 

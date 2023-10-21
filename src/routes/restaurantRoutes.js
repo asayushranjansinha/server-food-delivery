@@ -3,6 +3,10 @@ const router = express.Router();
 
 const RestaurantController = require("../controllers/RestaurantController.js");
 
+// Get all restaurants
+// http://localhost:3000/api/restaurant/all
+router.get("/all", RestaurantController.fetchAllRestaurants);
+
 // Search restaurants by their name or prefix
 // http://localhost:3000/api/restaurant/search?name=restaurant
 router.get("/search", RestaurantController.searchRestaurantByName);
@@ -15,7 +19,11 @@ router.get("/:restaurantId/menu", RestaurantController.fetchMenubyRestaurantId);
 // http://localhost:3000/api/restaurant/menu?item=pizza
 router.get("/menu", RestaurantController.fetchRestaurantsByFoodItem);
 
+// Update an existing restaurant
+router.put("/update", RestaurantController.updateRestaurant);
+
 // List new restaurant
+// http://localhost:3000/api/restaurant/list
 router.post("/list", RestaurantController.listRestaurant);
 
 // Add new menu to restaurant
@@ -30,6 +38,7 @@ router.post(
 );
 
 // Add food item to all menus of a name
+// http://localhost:3000/api/restaurant/menu?item=tikka
 router.post("/menus/fooditems", RestaurantController.addFoodItemByMenuName);
 
 module.exports = router;

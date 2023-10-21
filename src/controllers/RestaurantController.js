@@ -1,5 +1,7 @@
 const { Op } = require("sequelize");
-const { Restaurant, Menu, FoodItem } = require("../models");
+
+const Utils = require("../Utils/utils.js");
+const { Menu, FoodItem, sequelize } = require("../models");
 const {
   RestaurantServices,
   MenuServices,
@@ -7,29 +9,135 @@ const {
 } = require("../services/RestaurantServices.js");
 
 class RestaurantController {
-  async listRestaurant(req, res) {
-    let { name, email, phone, restaurantType } = req.body;
-
+  async fetchAllRestaurants(req, res) {
     try {
-      let resInfo = {
-        name: name,
-        email: email,
-        phone: phone,
-        restaurantType: restaurantType,
-      };
-      const restaurant = await RestaurantServices.create(resInfo);
-      if (restaurant) {
+      let filters;
+      let attributesToRetrieve;
+      let includedModels = [
+        {
+          model: Menu,
+          attributes: ["id", "name", "avgRating", "category"],
+          include: {
+            model: FoodItem,
+            attributes: ["name", "price"],
+          },
+        },
+      ];
+      const restaurants = await RestaurantServices.getMany(
+        filters,
+        attributesToRetrieve,
+        includedModels
+      );
+      if (restaurants) {
         return res.status(200).json({
           error: false,
-          message: "Restaurant Listing Successful.",
+          result: restaurants,
         });
       }
       return res
-        .status(401)
-        .json({ error: true, message: "Restaurant Listing Failure." });
+        .status(404)
+        .json({ error: true, message: "Restaurants not found!" });
     } catch (error) {
-      console.log("Restaurant Listing Error.", error);
-      return res.status(501).json({ error: true, message: "Server Error." });
+      console.log("Error in getting restaurants", error);
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server Error" });
+    }
+  }
+
+  async listRestaurant(req, res) {
+    try {
+      const { restaurantDetails, menus } = req.body;
+
+      const restaurantInfo = {
+        name: restaurantDetails.name,
+        email: restaurantDetails.email,
+        phone: restaurantDetails.phone,
+        description: restaurantDetails.description,
+        avgRating: restaurantDetails.avgRating,
+        avgDeliveryTime: restaurantDetails.avgDeliveryTime,
+        image: restaurantDetails.img,
+      };
+
+      const result = await sequelize.transaction(async (transaction) => {
+        // Creating the restaurant
+        const restaurant = await RestaurantServices.create(restaurantInfo);
+
+        // Creating the menus and corresponding food items
+        for (const menu of menus) {
+          const menuInfo = {
+            name: menu.name,
+            category: menu.category,
+            avgRating: menu.avgRating,
+          };
+
+          // Creating the menu
+          const createdMenu = await MenuServices.create(menuInfo);
+          await restaurant.addMenu(createdMenu);
+
+          // Creating the food items for the menu
+          for (const item of menu.items) {
+            const foodItemInfo = {
+              name: item.name,
+              price: item.price,
+            };
+
+            const createdFoodItem = await FoodItemServices.create(foodItemInfo);
+            await createdMenu.addFoodItem(createdFoodItem);
+          }
+        }
+        return restaurant;
+      });
+
+      if (result) {
+        return res
+          .status(201)
+          .json({ error: false, message: "Restaurant Listed" });
+      } else {
+        return res
+          .status(201)
+          .json({ error: true, message: "Restaurant Listing Failed" });
+      }
+    } catch (error) {
+      console.log("Error in listing restaurant!", error);
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server Error" });
+    }
+  }
+
+  async updateRestaurant(req, res) {
+    try {
+      let { restaurantId, updates } = req.body;
+
+      // Search if the restaurant already exists or not
+      const restaurant = await RestaurantServices.get({ id: restaurantId });
+      if (!restaurant) {
+        return res
+          .status(404)
+          .json({ error: true, message: "Restaurant Not Found." });
+      }
+
+      const result = await RestaurantServices.update(updates, {
+        id: restaurantId,
+      });
+
+      // Send appropriate response
+      if (result[0] === 1) {
+        res.status(200).json({
+          error: false,
+          message: "Restaurant details updated successfully.",
+        });
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "Failed to update restaurant." });
+      }
+    } catch (error) {
+      console.log("Error in updating restaurant", error);
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server Error" });
     }
   }
 
@@ -41,11 +149,11 @@ class RestaurantController {
           [Op.like]: `%${name}%`,
         },
       };
-      let attributes = ["id", "name", "email", "phone", "restaurantType"];
+      let attributes;
       let includes = [
         {
           model: Menu,
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "avgRating", "category"],
           include: {
             model: FoodItem,
             attributes: ["name", "price"],
@@ -60,26 +168,34 @@ class RestaurantController {
       if (restaurants) {
         return res.status(200).json({
           error: false,
-          restaurants: restaurants,
+          result: restaurants,
         });
       }
       return res
         .status(404)
-        .json({ error: true, message: "Restaurant not found" });
+        .json({ error: true, message: "Restaurant not found!" });
     } catch (error) {
       console.log("Error in getting restaurant", error);
-      return res.status(501).json({ error: true, message: "Server Error" });
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server Error" });
     }
   }
 
   async fetchMenubyRestaurantId(req, res) {
     try {
       const restaurantId = req.params.restaurantId;
-      const restaurantAttributes = ["id", "name", "phone", "restaurantType"];
+      const restaurantAttributes = [
+        "id",
+        "name",
+        "phone",
+        "restaurantType",
+        "avgRating",
+      ];
       const include = [
         {
           model: Menu,
-          attributes: ["id", "name"], // Include only 'id' and 'name' from Menu
+          attributes: ["id", "name", "avgRating", "category"], // Include only 'id' and 'name' from Menu
           include: {
             model: FoodItem,
             attributes: ["name", "price"], // Include only 'name' and 'price' from FoodItem
@@ -94,22 +210,31 @@ class RestaurantController {
       );
 
       if (!restaurant) {
-        return res.status(404).json({ error: "Restaurant not found" });
+        return res
+          .status(404)
+          .json({ error: true, message: "Restaurant not found!" });
       }
 
-      return res.status(200).json({ restaurant });
+      return res.status(200).json({ error: false, result: restaurant });
     } catch (error) {
-      console.error("Errorin fetching menu by restaurant id:", error);
-      return res.status(500).json({ error: "Server error" });
+      console.error("Error in fetching menu by restaurant id:", error);
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server error" });
     }
   }
 
   async addMenuToRestaurant(req, res) {
     try {
       const restaurantId = req.params.restaurantId;
-      const { menuName } = req.body;
+      const { menuName, menuCategory, menuAvgRating, menuItems } = req.body;
 
-      // Check if the restaurant exists
+      let menuInfo = {
+        name: menuName,
+        category: menuCategory,
+        avgRating: menuAvgRating,
+      };
+
       const restaurant = await RestaurantServices.get({ id: restaurantId });
       if (!restaurant) {
         return res
@@ -117,21 +242,30 @@ class RestaurantController {
           .json({ error: true, message: "Restaurant not found!" });
       }
 
-      // Create the menu and associate it with the restaurant
-      const menu = await MenuServices.create({ name: menuName });
-      let response = await restaurant.addMenu(menu);
+      const createdMenu = await MenuServices.create(menuInfo);
+      let response = await restaurant.addMenu(createdMenu);
+
+      for (const item of menuItems) {
+        const foodItemInfo = {
+          name: item.name,
+          price: item.price,
+        };
+
+        const createdFoodItem = await FoodItemServices.create(foodItemInfo);
+        await createdMenu.addFoodItem(createdFoodItem);
+      }
 
       if (response) {
         return res
-          .status(200)
-          .json({ error: false, message: "Menu added to restaurant" });
+          .status(201)
+          .json({ error: false, message: "Menu added to the restaurant" });
       }
       return res
         .status(422)
-        .json({ error: false, message: "Failed to add menu to restaurant" });
+        .json({ error: true, message: "Failed to add menu to the restaurant" });
     } catch (error) {
-      console.log("Error adding menu to restaurant", error);
-      return res.status(501).json({ error: false, message: "Server Error" });
+      console.log("Error adding menu to the restaurant", error);
+      return res.status(501).json({ error: true, message: "Server Error" });
     }
   }
 
@@ -139,66 +273,58 @@ class RestaurantController {
     try {
       const { menuName, foodItemData } = req.body;
 
-      // Find all menus with the specified name
-      const menus = await MenuServices.getMany({
-        name: menuName,
-      });
+      const foundMenus = await MenuServices.getMany({ name: menuName });
 
-      if (!menus) {
+      if (!foundMenus || foundMenus.length === 0) {
         return res.status(404).json({
           error: true,
           message: `No menus found with name '${menuName}'`,
         });
       }
 
-      // Create the food item and associate it with each menu
-      for (const menu of menus) {
-        const foodItem = await FoodItemServices.create({
+      for (const menu of foundMenus) {
+        const createdFoodItem = await FoodItemServices.create({
           name: foodItemData.name,
           price: foodItemData.price,
         });
-        await menu.addFoodItem(foodItem);
+        await menu.addFoodItem(createdFoodItem);
       }
 
       return res
         .status(201)
         .json({ error: false, message: "Items added to menus" });
     } catch (error) {
-      console.error("Error adding menus:", error);
+      console.error("Error adding food items to menus:", error);
       return res.status(500).json({ error: "Server error" });
     }
   }
 
   async addFoodItemByMenuId(req, res) {
     try {
-      const { menuId, foodItemData } = req.body;
+      const menuId = req.params.menuId;
+      const { foodItemData } = req.body;
 
-      // Find all menus with the specified name
-      const menu = await MenuServices.get({
-        id: menuId,
-      });
+      const menu = await MenuServices.get({ id: menuId });
 
       if (!menu) {
         return res.status(404).json({
           error: true,
-          message: `No menu found`,
+          message: `No menu found with ID ${menuId}`,
         });
       }
 
-      // Create the food item and associate it with each menu
-
-      const foodItem = await FoodItemServices.create({
+      const createdFoodItem = await FoodItemServices.create({
         name: foodItemData.name,
         price: foodItemData.price,
       });
 
-      await menu.addFoodItem(foodItem);
+      await menu.addFoodItem(createdFoodItem);
 
       return res
         .status(201)
-        .json({ error: false, message: "Items added to menu" });
+        .json({ error: false, message: "Item added to the menu" });
     } catch (error) {
-      console.error("Error adding menus:", error);
+      console.error("Error adding food item to the menu:", error);
       return res.status(500).json({ error: "Server error" });
     }
   }
@@ -212,30 +338,35 @@ class RestaurantController {
           .status(400)
           .json({ error: "Food item name is required in the query parameter" });
       }
+
       let filter = {};
-      let attributes = {};
-      let includes = [
+      let attributesToRetrieve;
+      let includedModels = [
         {
           model: Menu,
           required: true, // Use required to perform an inner join
           include: {
             model: FoodItem,
-            where: { name: foodItemName }, // Filter by the food item's name
-            attributes: ["name", "price"], // Exclude other food item attributes from the response
+            where: {
+              name: {
+                [Op.like]: `%${foodItemName}%`,
+              },
+            }, // Filter by the food item's name
+            attributes: ["name", "price"],
           },
-          attributes: ["id", "name"], // Include only menu's id and name
+          attributes: ["id", "name", "avgRating"], // Include only menu's id and name
         },
       ];
+
       const restaurants = await RestaurantServices.getMany(
         filter,
-        attributes,
-        includes
+        attributesToRetrieve,
+        includedModels
       );
 
-      // Return the list of restaurants offering the food item
-      return res.status(200).json(restaurants);
+      return res.status(200).json({ error: false, restaurants });
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching restaurants by food item:", error);
       return res.status(500).json({ error: "Server error" });
     }
   }

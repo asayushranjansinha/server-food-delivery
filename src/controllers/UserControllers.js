@@ -8,9 +8,9 @@ const Utils = require("../Utils/utils.js");
 const numSaltRounds = 8;
 class UserContoller {
   async signup(req, res) {
-    let { email, phone, password, firstName, lastName, userType } = req.body;
+    let { email, phone, password, firstName, lastName } = req.body;
     try {
-      // Hash the password with 10 rounds of salt
+      // Hash the password with 8 rounds of salt
       let hashedPassword = bcryptjs.hashSync(password, numSaltRounds);
       let userId = uuidv4();
 
@@ -21,17 +21,22 @@ class UserContoller {
         email: email,
         phone: phone,
         password: hashedPassword,
-        userType: userType,
       });
+
       if (user) {
         return res
           .status(200)
           .json({ error: false, message: "Signup Successful." });
+      } else {
+        return res
+          .status(400)
+          .json({ error: true, message: "Signup Failure." });
       }
-      return res.status(401).json({ error: true, message: "Signup Failure." });
     } catch (error) {
       console.log("Signup Error", error);
-      return res.status(501).json({ error: true, message: "Server Error." });
+      return res
+        .status(500)
+        .json({ error: true, message: "Internal Server Error." });
     }
   }
 
@@ -39,7 +44,7 @@ class UserContoller {
     let { email, password } = req.body;
     try {
       const user = await UserServices.get({ email: email });
-      let response = Object.assign({}, user);
+      let response = { ...user };
 
       if (Utils.isValid(response)) {
         let passwordIsValid = bcryptjs.compareSync(password, user.password);
@@ -51,18 +56,18 @@ class UserContoller {
           });
         }
 
-        user.lasLoginDate = Utils.getDate();
-        user.save();
+        user.lastLoginDate = Utils.getDate();
+        await user.save();
 
-        // todo:jwt token
+        // todo: Implement JWT token generation
         // let token = jwt.sign(
-        //   {
-        //     id: user.userId,
-        //   },
-        //   config.secret,
-        //   {
-        //     expiresIn: 86400, // expires in 24 hours
-        //   }
+        //     {
+        //         id: user.userId,
+        //     },
+        //     config.secret,
+        //     {
+        //         expiresIn: 86400, // expires in 24 hours
+        //     }
         // );
 
         user.password = null;
@@ -71,16 +76,17 @@ class UserContoller {
           error: false,
           //   accessToken: token,
           user: user,
-          message: "Signin Successful",
+          message: "Sign-in Successful",
+        });
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: "User not found.",
         });
       }
-      return res.status(200).json({
-        error: true,
-        message: "Error signing in user.",
-      });
     } catch (error) {
-      console.log("Signin Error", error);
-      return res.status(501).json({ error: true, message: "Server Error." });
+      console.log("Sign-in Error", error);
+      return res.status(500).json({ error: true, message: "Server Error." });
     }
   }
 
@@ -94,7 +100,7 @@ class UserContoller {
         ["id", "password"]
       );
 
-      let response = Object.assign({}, user);
+      let response = { ...user };
       if (Utils.isValid(response)) {
         let passwordIsValid = bcryptjs.compareSync(password, user.password);
         if (!passwordIsValid) {
@@ -107,27 +113,30 @@ class UserContoller {
         let newHashedPassword = bcryptjs.hashSync(newPassword, numSaltRounds);
 
         user.password = newHashedPassword;
-        user.save();
+        await user.save();
 
         return res.status(200).json({
           error: false,
-          message: "Password Updated Succesfully",
+          message: "Password Updated Successfully",
+        });
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: "User not found.",
         });
       }
     } catch (error) {
       console.log("Change Password Error", error);
-      return res.status(501).json({ error: true, message: "Server Error." });
+      return res.status(500).json({ error: true, message: "Server Error." });
     }
   }
 
   async forgotPassword(req, res) {
-    let { email, newPassword } = req.body;
+    const { email, newPassword } = req.body;
     try {
       let newHashedPassword = bcryptjs.hashSync(newPassword, numSaltRounds);
       let user = await UserServices.update(
-        {
-          password: newHashedPassword,
-        },
+        { password: newHashedPassword },
         { email: email }
       );
       if (user) {
@@ -135,14 +144,15 @@ class UserContoller {
           error: false,
           message: "A mail containing your new password has been sent.",
         });
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: "User not found.",
+        });
       }
-      return res.status(401).json({
-        error: true,
-        message: "Error updating new password",
-      });
     } catch (error) {
-      console.log("Error updating new password", error);
-      return res.status(501).json({ error: true, message: "Server Error" });
+      console.error("Error updating new password", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
     }
   }
 
@@ -229,14 +239,16 @@ class UserContoller {
         "userType",
       ]);
 
-      let response = Object.assign({}, user);
-      if (Utils.isValid(response)) {
+      if (user) {
         return res.status(200).json({ error: false, user: user });
+      } else {
+        return res
+          .status(404)
+          .json({ error: true, message: "User not found." });
       }
-      return res.status(401).json({ error: true, message: "User not found." });
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      return res.status(501).json({
+      return res.status(500).json({
         error: true,
         message: "Internal server error.",
       });
@@ -254,22 +266,23 @@ class UserContoller {
         "lastName",
         "email",
       ]);
-      let response = Object.assign({}, user);
-      if (Utils.isValid(response)) {
-        (user.firstName = firstName),
-          (user.lastName = lastName),
-          (user.updatedAt = Utils.getDate());
-        user.save();
+
+      if (user) {
+        user.firstName = firstName;
+        user.lastName = lastName;
+        user.updatedAt = Utils.getDate();
+        await user.save();
 
         return res.status(200).json({ error: false, user: user });
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: "User not found.",
+        });
       }
-      return res.status(401).json({
-        error: true,
-        message: "An error has occurred while updating profile.",
-      });
     } catch (error) {
-      console.log("Error while updating profile", error);
-      return res.status(501).json({ error: true, message: "Server Error" });
+      console.error("Error while updating profile", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
     }
   }
 }

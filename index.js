@@ -10,6 +10,10 @@ const restaurantRoutes = require("./src/routes/restaurantRoutes.js");
 app.use(express.json());
 
 // Routes
+app.get("/", (req, res) => {
+  res.send("<h1 style='text-align: center'>Welcome to my API</h1>");
+});
+
 app.use("/api/user", userRoutes);
 app.use("/api/restaurant", restaurantRoutes);
 

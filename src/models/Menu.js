@@ -12,6 +12,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      category: {
+        type: DataTypes.ENUM,
+        values: ["veg", "nonveg"],
+        defaultValue: "veg",
+      },
+      avgRating: {
+        type: DataTypes.FLOAT,
+        defaultValue: 1.0,
+      },
     },
     {}
   );
