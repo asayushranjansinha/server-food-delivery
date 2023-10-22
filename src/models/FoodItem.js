@@ -15,6 +15,7 @@ module.exports = (sequelize, DataTypes) => {
   );
   FoodItem.associate = (models) => {
     FoodItem.belongsTo(models.Menu);
+    FoodItem.belongsToMany(models.Order, { through: models.OrderFoodItem });
   };
   return FoodItem;
 };

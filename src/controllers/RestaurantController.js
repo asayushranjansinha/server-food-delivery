@@ -370,5 +370,7 @@ class RestaurantController {
       return res.status(500).json({ error: "Server error" });
     }
   }
+
+  
 }
 module.exports = new RestaurantController();

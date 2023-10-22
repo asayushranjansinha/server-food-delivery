@@ -32,11 +32,15 @@ db.User = require("./User.js")(sequelize, DataTypes);
 db.Restaurant = require("./Restaurant.js")(sequelize, DataTypes);
 db.Menu = require("./Menu.js")(sequelize, DataTypes);
 db.FoodItem = require("./FoodItem.js")(sequelize, DataTypes);
+db.Order = require("./Order.js")(sequelize, DataTypes);
+db.OrderFoodItem = require("./OrderFoodItem.js")(sequelize, DataTypes);
 
 // Associations
 db.Restaurant.associate(db);
 db.Menu.associate(db);
 db.FoodItem.associate(db);
+db.User.associate(db);
+db.Order.associate(db);
 
 // Sync DB
 

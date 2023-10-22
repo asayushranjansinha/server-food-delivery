@@ -3,7 +3,10 @@ const { v4: uuidv4 } = require("uuid");
 const jwt = require("jsonwebtoken");
 
 const UserServices = require("../services/UserServices.js");
+const OrderServices = require("../services/Order.js");
 const Utils = require("../Utils/utils.js");
+const { sequelize } = require("../models/index.js");
+const { FoodItemServices } = require("../services/RestaurantServices.js");
 
 const numSaltRounds = 8;
 class UserContoller {
@@ -15,7 +18,7 @@ class UserContoller {
       let userId = uuidv4();
 
       let user = await UserServices.create({
-        userId: userId,
+        userId: 1,
         firstName: firstName,
         lastName: lastName,
         email: email,
@@ -282,6 +285,46 @@ class UserContoller {
       }
     } catch (error) {
       console.error("Error while updating profile", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async createOrder(req, res) {
+    const { userId, amount, foodItems } = req.body;
+
+    try {
+      const user = await UserServices.get({ id: userId });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const order = await OrderServices.create({ amount: amount });
+      console.log("Order created!");
+
+      // Link the order to the user
+      await user.addOrder(order);
+      console.log("Order linked to the user");
+
+      // Link food items to the order
+      for (const item of foodItems) {
+        // Assuming FoodItemServices.getById(item.id) is available to fetch the existing food item
+        const existingFoodItem = await FoodItemServices.get({id:item.id});
+        if (existingFoodItem) {
+          await order.addFoodItem(existingFoodItem, {
+            through: { quantity: item.quantity },
+          });
+          console.log("Food item linked to the order");
+        } else {
+          console.log(`Food item with id ${item.id} does not exist`);
+        }
+      }
+
+      return res
+        .status(201)
+        .json({ error: false, message: "Order placed!", result: order });
+    } catch (error) {
+      console.error("Error in creating order", error);
       return res.status(500).json({ error: true, message: "Server Error" });
     }
   }

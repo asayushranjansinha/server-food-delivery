@@ -88,7 +88,6 @@
 ```
 
 ## To add a new menu with food items
-
 ```
 {
   "menuName": "Vegetarian Menu",
@@ -180,7 +179,6 @@
 ```
 
 ## ngrok link
-
 ```
  https://99d8-182-68-50-56.ngrok-free.app -> http://localhost:3000
 ```

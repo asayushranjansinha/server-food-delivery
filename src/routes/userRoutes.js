@@ -30,6 +30,10 @@ router.post("/change-password", UserContoller.changePassword);
 // http://localhost:3000/api/user/forgot-password
 router.post("/forgot-password", UserContoller.forgotPassword);
 
+// To place order
+// http://localhost:3000/api/user/placeorder
+router.post("/placeorder", UserContoller.createOrder);
+
 // To delete user
 // http://localhost:3000/api/user/delete-account/2e38f963-3687-4c9f-977c-ebed17f838f4
 router.delete("/delete-account/:userId", UserContoller.deleteAccount);
