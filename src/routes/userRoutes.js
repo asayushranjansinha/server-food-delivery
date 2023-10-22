@@ -7,12 +7,24 @@ const router = express.Router();
 router.get("/all", UserContoller.getAllUsers);
 
 // To get user profile
-// http://localhost:3000/api/user/profile/2e38f963-3687-4c9f-977c-ebed17f838f4
+// http://localhost:3000/api/user/profile/:userId
 router.get("/profile/:userId", UserContoller.getProfile);
 
+// To get order by id
+// http://localhost:3000/api/user/order/:orderId
+router.get("/order/:id", UserContoller.getOrderById);
+
+// To get orders by user id
+// http://localhost:3000/api/user/:userId/orders
+router.get("/:userId/orders",UserContoller.getOrdersByUserId)
+
 // To update user
-// http://localhost:3000/api/user/profile/update/2e38f963-3687-4c9f-977c-ebed17f838f4
+// http://localhost:3000/api/user/profile/update/:userId
 router.patch("/profile/update/:userId", UserContoller.updateProfile);
+
+// To update order status
+// http://localhost:3000/api/user/order/update
+router.put("/order/update", UserContoller.updateOrder);
 
 // To signup new user
 // http://localhost:3000/api/user/signup
@@ -31,7 +43,7 @@ router.post("/change-password", UserContoller.changePassword);
 router.post("/forgot-password", UserContoller.forgotPassword);
 
 // To place order
-// http://localhost:3000/api/user/placeorder
+// http://localhost:3000/api/user/order/create
 router.post("/placeorder", UserContoller.createOrder);
 
 // To delete user

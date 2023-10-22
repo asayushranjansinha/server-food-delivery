@@ -5,7 +5,12 @@ const jwt = require("jsonwebtoken");
 const UserServices = require("../services/UserServices.js");
 const OrderServices = require("../services/Order.js");
 const Utils = require("../Utils/utils.js");
-const { sequelize } = require("../models/index.js");
+const {
+  sequelize,
+  FoodItem,
+  OrderFoodItem,
+  Order,
+} = require("../models/index.js");
 const { FoodItemServices } = require("../services/RestaurantServices.js");
 
 const numSaltRounds = 8;
@@ -296,7 +301,9 @@ class UserContoller {
       const user = await UserServices.get({ id: userId });
 
       if (!user) {
-        throw new Error("User not found");
+        return res
+          .status(404)
+          .json({ error: true, message: "User not found!" });
       }
 
       const order = await OrderServices.create({ amount: amount });
@@ -308,15 +315,16 @@ class UserContoller {
 
       // Link food items to the order
       for (const item of foodItems) {
-        // Assuming FoodItemServices.getById(item.id) is available to fetch the existing food item
-        const existingFoodItem = await FoodItemServices.get({id:item.id});
+        const existingFoodItem = await FoodItemServices.get({ id: item.id });
         if (existingFoodItem) {
           await order.addFoodItem(existingFoodItem, {
             through: { quantity: item.quantity },
           });
           console.log("Food item linked to the order");
         } else {
-          console.log(`Food item with id ${item.id} does not exist`);
+          return res
+            .status(404)
+            .json({ error: true, message: "Food Item not found!" });
         }
       }
 
@@ -325,6 +333,107 @@ class UserContoller {
         .json({ error: false, message: "Order placed!", result: order });
     } catch (error) {
       console.error("Error in creating order", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async updateOrder(req, res) {
+    const { orderId, status } = req.body;
+    try {
+      const order = await OrderServices.get({ id: orderId });
+      if (!order) {
+        return res
+          .status(404)
+          .json({ error: true, message: "Order not found" });
+      }
+
+      order.status = status;
+      await order.save();
+
+      return res
+        .status(200)
+        .json({ error: false, message: "Order Updated successfully" });
+    } catch (error) {
+      console.error("Error in updating order", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async getOrderById(req, res) {
+    try {
+      const orderId = req.params.id;
+      const orderAttributes = ["id", "amount", "status"];
+      const include = [
+        {
+          model: FoodItem,
+          attributes: ["name", "price"],
+          through: { attributes: ["quantity"] },
+        },
+      ];
+      const order = await OrderServices.searchByPk(
+        orderId,
+        orderAttributes,
+        include
+      );
+      if (!order) {
+        return res
+          .status(404)
+          .json({ error: true, message: "Order not found" });
+      }
+      const formattedOrder = {
+        id: order.id,
+        amount: order.amount,
+        status: order.status,
+        foodItems: order.FoodItems.map((item) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.OrderFoodItem.quantity,
+        })),
+      };
+      return res.status(200).json({ error: false, result: formattedOrder });
+    } catch (error) {
+      console.error("Error in getting order", error);
+      return res.status(500).json({ error: true, message: "Server Error" });
+    }
+  }
+
+  async getOrdersByUserId(req, res) {
+    const { userId } = req.params;
+    try {
+      let filters = { userId: userId };
+      let attributes;
+      let include = [
+        {
+          model: Order,
+          attributes: ["id", "amount", "status"],
+          include: [
+            {
+              model: FoodItem,
+              attributes: ["name", "price"],
+              through: { attributes: ["quantity"] },
+            },
+          ],
+        },
+      ];
+      const user = await UserServices.get(filters, attributes, include);
+      if (!user) {
+        return res.status(404).json({ error: true, message: "User not found" });
+      }
+
+      const userOrders = user.Orders.map((order) => ({
+        id: order.id,
+        amount: order.amount,
+        status: order.status,
+        foodItems: order.FoodItems.map((item) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.OrderFoodItem.quantity,
+        })),
+      }));
+
+      return res.status(200).json({ error: false, result: userOrders });
+    } catch (error) {
+      console.error("Error in fetching user orders", error);
       return res.status(500).json({ error: true, message: "Server Error" });
     }
   }
